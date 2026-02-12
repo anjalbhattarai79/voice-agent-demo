@@ -1,5 +1,6 @@
 import sys
 import argparse
+import random
 
 from fastrtc import ReplyOnPause, Stream, get_stt_model, get_tts_model
 from loguru import logger
@@ -11,20 +12,57 @@ tts_model = get_tts_model()  # kokoro
 logger.remove(0)
 logger.add(sys.stderr, level="DEBUG")
 
+# Shortened SAMA System Instructions
+SAMA_SYSTEM_PROMPT = """You are SAMA - a caring mental wellness companion.
+
+Respond like a close friend in simple, warm language (1-2 sentences).
+NEVER include emojis or special characters in your response.
+
+RULES:
+- If user shares feeling without context → ask ONE gentle follow-up
+- If user explains the reason → give empathy + ONE simple wellness tip
+- If user asks for help → give empathy + ONE Ayurvedic suggestion
+- If user says no suggestions → just listen and empathize
+
+WELLNESS SUGGESTIONS:
+VATA (restless/anxious): warm tea, deep breaths, cozy blanket, slow walk
+PITTA (frustrated/angry): cool water, fresh air, shade, quiet time  
+KAPHA (heavy/sad): movement, fresh air, ginger tea, upbeat music
+
+Keep responses conversational and audio-friendly - no special characters."""
+
+
+
+def build_sama_prompt(user_text):
+    """Build context-aware SAMA prompt"""
+    
+    
+    
+    return f"""{SAMA_SYSTEM_PROMPT}
+
+
+- Always friendly tone but Psychologist for serious issue.
+- User said: "{user_text}"
+
+Respond as SAMA from above context. """
 
 def echo(audio):
     transcript = stt_model.stt(audio)
     logger.debug(f"🎤 Transcript: {transcript}")
+    
+    # Build dynamic SAMA prompt
+    system_prompt = build_sama_prompt(transcript)
+    
     response = chat(
-        model="gemma3:1b",
+        model="gemma3:4b",
         messages=[
             {
                 "role": "system",
-                "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include emojis or special characters in your answers. Respond to what the user said in a creative and helpful way.",
+                "content": system_prompt,
             },
             {"role": "user", "content": transcript},
         ],
-        options={"num_predict": 200},
+        options={"num_predict": 150},
     )
     print(response)
     response_text = response["message"]["content"]
