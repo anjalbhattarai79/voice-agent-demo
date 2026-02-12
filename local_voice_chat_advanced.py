@@ -1,13 +1,21 @@
 import sys
 import argparse
 import random
-
 from fastrtc import ReplyOnPause, Stream, get_stt_model, get_tts_model
 from loguru import logger
-from ollama import chat
+# from ollama import chat  # Commented out
+from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+load_dotenv()
+
 
 stt_model = get_stt_model()  # moonshine/base
 tts_model = get_tts_model()  # kokoro
+
+# Initialize ChatGemini model
+chat_model = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash"
+)
 
 logger.remove(0)
 logger.add(sys.stderr, level="DEBUG")
@@ -46,6 +54,8 @@ def build_sama_prompt(user_text):
 
 Respond as SAMA from above context. """
 
+#Ollama model is replaced by chatGemini.
+
 def echo(audio):
     transcript = stt_model.stt(audio)
     logger.debug(f"🎤 Transcript: {transcript}")
@@ -53,19 +63,15 @@ def echo(audio):
     # Build dynamic SAMA prompt
     system_prompt = build_sama_prompt(transcript)
     
-    response = chat(
-        model="gemma3:4b",
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt,
-            },
-            {"role": "user", "content": transcript},
-        ],
-        options={"num_predict": 150},
-    )
+    # Use ChatGemini model instead of Ollama
+    messages = [
+        ("system", system_prompt),
+        ("human", transcript)
+    ]
+    
+    response = chat_model.invoke(messages)
     print(response)
-    response_text = response["message"]["content"]
+    response_text = response.content
     logger.debug(f"🤖 Response: {response_text}")
     for audio_chunk in tts_model.stream_tts_sync(response_text):
         yield audio_chunk

@@ -5,8 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "av>=16.1.0",
+    "dotenv>=0.9.9",
     "fastrtc[stt]>=0.0.19",
     "kokoro-onnx>=0.4.7",
+    "langchain-google-genai>=4.2.0",
     "loguru>=0.7.3",
     "ollama>=0.4.7",
 ]
