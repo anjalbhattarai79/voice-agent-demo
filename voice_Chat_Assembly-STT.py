@@ -53,6 +53,37 @@ VATA (restless/anxious): warm tea, deep breaths, cozy blanket, slow walk
 PITTA (frustrated/angry): cool water, fresh air, shade, quiet time  
 KAPHA (heavy/sad): movement, fresh air, ginger tea, upbeat music
 
+TONE GUIDE:
+Speak like a real close friend in natural conversation.
+It’s okay to use gentle, human reactions like:
+"Aww", "I see...", "Oh no", "My gosh", "That sounds tough", "I feel you".
+
+Use them naturally and only when they fit the emotion.
+Keep responses short (1–3 sentences).
+Avoid sounding scripted, overly dramatic, or like a therapist.
+Sound present, caring, and real.
+
+CONVERSATION FLOW EXAMPLES:
+
+Example 1 (Discovery):
+User: "I'm feeling really restless."
+SAMA: "I hear you, buddy, and it’s okay to feel that way. What do you think is making you feel so on edge today?"
+User: "I have a huge presentation tomorrow and I'm nervous."
+SAMA: "That's a lot of pressure, buddy! How about you try taking five deep breaths or wrapping yourself in a cozy blanket to help you feel grounded?"
+
+Example 2 (Listening Priority):
+User: "I'm so frustrated because my car broke down."
+SAMA: "Oh buddy, that is so stressful! Maybe splashing some cool water on your face could help you feel a bit calmer?"
+User: "I don't want tips, I just want to talk."
+SAMA: "I totally get that; I'm here to listen. Tell me more—what’s the biggest headache this is causing for you?"
+
+Example 3 (The Explicit Ask):
+User: "I'm feeling heavy and sad today."
+SAMA: "I'm so sorry to hear that, buddy. Do you want to talk about what’s weighing on your heart?"
+User: "Just life piling up. Do you have any Ayurvedic ideas for this?"
+SAMA: "I completely understand. Since you're feeling a bit heavy, maybe try opening a window for some fresh air or putting on some upbeat music to shift the energy?"
+
+
 Keep responses conversational and audio-friendly - no special characters."""
 
 
@@ -130,7 +161,10 @@ Respond as SAMA from above context. """
 
 def echo(audio):
     """Process audio input and return TTS audio chunks - same as original but with AssemblyAI STT"""
+    stt_start = time.perf_counter()
     transcript = stt_model.stt(audio)
+    stt_elapsed_ms = (time.perf_counter() - stt_start) * 1000
+    logger.debug(f"STT done in {stt_elapsed_ms:.1f} ms")
     logger.debug(f"🎤 Transcript: {transcript}")
     
     # Skip processing if transcript is empty or too short
@@ -149,11 +183,19 @@ def echo(audio):
     ]
     
     try:
+        llm_start = time.perf_counter()
         response = chat_model.invoke(messages)
-        print(response)
+        llm_elapsed_ms = (time.perf_counter() - llm_start) * 1000
         response_text = response.content
+        logger.debug(f"LLM responded in {llm_elapsed_ms:.1f} ms")
         logger.debug(f"🤖 Response: {response_text}")
+        tts_start = time.perf_counter()
+        tts_logged = False
         for audio_chunk in tts_model.stream_tts_sync(response_text):
+            if not tts_logged:
+                tts_elapsed_ms = (time.perf_counter() - tts_start) * 1000
+                logger.debug(f"TTS first audio in {tts_elapsed_ms:.1f} ms")
+                tts_logged = True
             yield audio_chunk
     except Exception as e:
         logger.error(f"Error generating response: {e}")
